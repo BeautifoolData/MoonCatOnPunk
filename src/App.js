@@ -193,6 +193,7 @@ export default function MoonCatPunkComposer() {
         This tool reads CryptoPunks and MoonCats directly from Ethereum. Your
         wallet provides a free connection to access on-chain data without
         relying on external APIs.
+        <br /><strong>This site will never ask for a transaction after connecting.</strong>
       </p>
 
       {!connected && (
