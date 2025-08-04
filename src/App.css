@@ -1,0 +1,150 @@
+.mooncat-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fdf6b2 0%, #e5e7eb 100%);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.mooncat-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #22223b;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.mooncat-blurb {
+  font-size: 1rem;
+  color: #3d405b;
+  margin-bottom: 24px;
+  max-width: 500px;
+  text-align: center;
+}
+
+.mooncat-form {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mooncat-input-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.mooncat-label {
+  display: block;
+  font-size: 0.95rem;
+  color: #3d405b;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.mooncat-input {
+  border: 1px solid #d3d3d3;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  text-align: center;
+  width: 100%;
+}
+
+.mooncat-move-label {
+  font-size: 0.95rem;
+  color: #3d405b;
+  margin-bottom: 2px;
+}
+
+.mooncat-arrows {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  width: 112px;
+  margin: 0 auto;
+}
+
+.mooncat-arrow-btn {
+  background: #dbeafe;
+  border: none;
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: background 0.15s;
+}
+.mooncat-arrow-btn:hover {
+  background: #a5b4fc;
+}
+
+.mooncat-size-label {
+  font-size: 0.95rem;
+  color: #3d405b;
+  margin-bottom: 2px;
+}
+
+.mooncat-size-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.mooncat-size-btn {
+  background: #dbeafe;
+  border: none;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.mooncat-size-btn:hover {
+  background: #a5b4fc;
+}
+.mooncat-size-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  color: #22223b;
+}
+
+.mooncat-error {
+  color: #b91c1c;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 16px;
+}
+
+.mooncat-canvas-wrapper {
+  border: 1.5px solid #e5e7eb;
+  padding: 24px;
+  margin: 32px 0 0 0;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.07);
+  display: flex;
+  justify-content: center;
+}
+
+.mooncat-connect-btn {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.15rem;
+  background: #6366f1;
+  color: white;
+  cursor: pointer;
+  margin-bottom: 18px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.mooncat-connect-btn:hover {
+  background: #4338ca;
+}
