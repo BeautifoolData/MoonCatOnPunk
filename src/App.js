@@ -279,6 +279,7 @@ export default function MoonCatPunkComposer() {
               }}
             >
               Cat X: {catX} | Cat Y: {catY} | Scale: {catScale}
+              <br />Drag the cat for placement
             </div>
           </div>
           <div className="mooncat-canvas-wrapper">
