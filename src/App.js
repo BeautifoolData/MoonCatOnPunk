@@ -194,6 +194,7 @@ export default function MoonCatPunkComposer() {
         wallet provides a free connection to access on-chain data without
         relying on external APIs.
         <br /><strong>This site will never ask for a transaction after connecting.</strong>
+        <br />Use a throwaway wallet. Does not check your holdings
       </p>
 
       {!connected && (
