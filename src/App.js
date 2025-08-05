@@ -172,6 +172,7 @@ export default function MoonCatPunkComposer() {
     (async () => {
       try {
         const infuraProvider = new JsonRpcProvider(INFURA_URL);
+        console.log('Provider URL:', INFURA_URL); // TODO delete me...
         await infuraProvider.getBlockNumber();
         setProviderReady(true);
         setErrorMsg(null);
