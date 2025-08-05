@@ -1,7 +1,6 @@
 .mooncat-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #fdf6b2 0%, #e5e7eb 100%);
-  padding: 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -37,7 +36,7 @@
 .mooncat-input-group {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 50px;
 }
 
 .mooncat-label {
@@ -150,7 +149,6 @@
 }
 
 .mooncat-bg-controls {
-  margin: 20px 0 4px 0;
   text-align: center;
 }
 .mooncat-bg-presets {
@@ -170,4 +168,56 @@
 }
 .mooncat-bg-presets button:focus {
   box-shadow: 0 0 0 2px #a5b4fc;
+}
+
+.mooncat-mode-btn {
+  background: #e5e7eb;
+  color: #444;
+  padding: 8px 18px;
+  border: 2px solid #a5b4fc;
+  border-radius: 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  outline: none;
+  margin-top: 16px;
+}
+
+.mooncat-mode-btn.active {
+  background: #6366f1;
+  color: #fff;
+  border: 2px solid #4f46e5;
+  box-shadow: 0 2px 12px 0 #a5b4fc44;
+}
+.mooncat-mode-btn:hover {
+  background: #c7d2fe;
+}
+.mooncat-mode-btn.active:hover {
+  background: #4f46e5;
+}
+
+.mooncat-punk-controls,
+.mooncat-cat-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  text-align: center;   /* <--- ADD THIS */
+}
+
+
+.mooncat-reset-btn{
+  background: #e5e7eb;
+  color: #444;
+  padding: 4px 12px;
+  border: 2px solid #a5b4fc;
+  border-radius: 8px;
+  font-size: 1.05rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border 0.2s;
+  outline: none;
+  margin-top: 16px;
 }

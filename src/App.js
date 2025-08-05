@@ -23,9 +23,10 @@ const PUNK_SIZE = 24; // CryptoPunks are 24x24 SVGs (official)
 const DEFAULT_CAT_SCALE = 0.6;
 
 export default function MoonCatPunkComposer() {
+  const [mode5997, setMode5997] = useState(false);
+
   // Wallet state
   const [connected, setConnected] = useState(false);
-  const [address, setAddress] = useState(null);
 
   const [canvasBg, setCanvasBg] = useState("#fff");
 
@@ -49,9 +50,27 @@ export default function MoonCatPunkComposer() {
   const [catY, setCatY] = useState(DEFAULT_CAT_Y);
   const [catScale, setCatScale] = useState(DEFAULT_CAT_SCALE);
 
+  const [punkX, setPunkX] = useState(0);
+  const [punkY, setPunkY] = useState(0);
+  const [punkScale, setPunkScale] = useState(1);
+
   // Loading/error
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+
+  const combinedSVG = mode5997
+    ? `
+    <svg width='480' height='600' viewBox='-80 -120 400 400' xmlns='http://www.w3.org/2000/svg'>
+      <g transform='scale(2)'>${catSVG}</g>
+      <g transform='translate(${punkX},${punkY}) scale(${punkScale})'>${punkSVG}</g>
+    </svg>
+  `
+    : `
+    <svg width='480' height='600' viewBox='-40 -80 320 320' xmlns='http://www.w3.org/2000/svg'>
+      <g transform='scale(1)'>${punkSVG}</g>
+      <g transform='translate(${catX},${catY}) scale(${catScale})'>${catSVG}</g>
+    </svg>
+  `;
 
   // Log cat position and scale on change (for easy manual adjustment)
   useEffect(() => {
@@ -73,10 +92,6 @@ export default function MoonCatPunkComposer() {
       try {
         setErrorMsg(null);
         setLoading(true);
-        const [addr] = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setAddress(addr);
         setConnected(true);
       } catch (err) {
         console.error("Wallet connection error:", err);
@@ -143,10 +158,8 @@ export default function MoonCatPunkComposer() {
     if (!window.ethereum) return;
     const handler = (accounts) => {
       if (accounts.length === 0) {
-        setAddress(null);
         setConnected(false);
       } else {
-        setAddress(accounts[0]);
         setConnected(true);
       }
     };
@@ -181,11 +194,55 @@ export default function MoonCatPunkComposer() {
     window.addEventListener("mouseup", handleUp);
   };
 
+  const handlePunkMouseDown = (e) => {
+    e.preventDefault();
+    const svg = document.getElementById("mooncat-svg-canvas");
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const start = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+    const startPunk = { x: punkX, y: punkY };
+
+    const handleMove = (e2) => {
+      const pt2 = svg.createSVGPoint();
+      pt2.x = e2.clientX;
+      pt2.y = e2.clientY;
+      const curr = pt2.matrixTransform(svg.getScreenCTM().inverse());
+
+      setPunkX(startPunk.x + (curr.x - start.x));
+      setPunkY(startPunk.y + (curr.y - start.y));
+    };
+    const handleUp = () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+  };
+
   // Reset position/scale
   const handleReset = () => {
     setCatX(DEFAULT_CAT_X);
     setCatY(DEFAULT_CAT_Y);
     setCatScale(DEFAULT_CAT_SCALE);
+  };
+
+  const handleModeToggle = () => {
+    setMode5997((prev) => {
+      // When turning ON, reset punk controls and center punk
+      if (!prev) {
+        setPunkX(0);
+        setPunkY(0);
+        setPunkScale(0.5);
+      } else {
+        // When turning OFF, reset cat controls and center cat
+        setCatX(0);
+        setCatY(0);
+        setCatScale(0.6);
+      }
+      return !prev;
+    });
   };
 
   return (
@@ -195,8 +252,12 @@ export default function MoonCatPunkComposer() {
         This tool reads CryptoPunks and MoonCats directly from Ethereum. Your
         wallet provides a free connection to access on-chain data without
         relying on external APIs.
-        <br /><strong>This site will never ask for a transaction after connecting.</strong>
-        <br />Use a throwaway wallet. Does not check your holdings
+        <br />
+        <strong>
+          This site will never ask for a transaction after connecting.
+        </strong>
+        <br />
+        Use a throwaway wallet. Does not check your holdings
       </p>
 
       {!connected && (
@@ -239,87 +300,221 @@ export default function MoonCatPunkComposer() {
                   value={catId}
                   min={0}
                   onChange={(e) =>
-                    setCatId(Math.max(0, Math.min(25439, Number(e.target.value))))
+                    setCatId(
+                      Math.max(0, Math.min(25439, Number(e.target.value))),
+                    )
                   }
                   className="mooncat-input"
                   disabled={loading}
                 />
               </div>
             </div>
-            <div style={{ marginTop: 8 }}>
-              <label className="mooncat-size-label">Cat Size</label>
-              <div className="mooncat-size-row">
+            {mode5997 ? (
+              <div className="mooncat-punk-controls" style={{ marginTop: 8 }}>
+                <label className="mooncat-size-label">Punk Size</label>
+                <div className="mooncat-size-row">
+                  <button
+                    onClick={() => setPunkScale((s) => Math.max(0.1, s - 0.1))}
+                    className="mooncat-size-btn"
+                  >
+                    −
+                  </button>
+                  <span className="mooncat-size-value">
+                    {punkScale.toFixed(1)}
+                  </span>
+                  <button
+                    onClick={() => setPunkScale((s) => s + 0.1)}
+                    className="mooncat-size-btn"
+                  >
+                    ＋
+                  </button>
+                </div>
                 <button
-                  onClick={() => setCatScale((s) => Math.max(0.1, s - 0.1))}
-                  className="mooncat-size-btn"
+                  className="mooncat-reset-btn"
+                  onClick={() => {
+                    setPunkX(0);
+                    setPunkY(0);
+                    setPunkScale(0.5);
+                  }}
+                  disabled={loading}
+                  style={{ marginTop: 10 }}
                 >
-                  −
+                  Reset Punk Position
                 </button>
-                <span className="mooncat-size-value">
-                  {catScale.toFixed(1)}
-                </span>
-                <button
-                  onClick={() => setCatScale((s) => s + 0.1)}
-                  className="mooncat-size-btn"
+                <div
+                  style={{
+                    fontSize: "0.95rem",
+                    color: "#6b7280",
+                    margin: "8px 0 0 0",
+                  }}
                 >
-                  ＋
+                  Drag the punk for placement
+                </div>
+              </div>
+            ) : (
+              <div className="mooncat-punk-controls" style={{ marginTop: 8 }}>
+                <label className="mooncat-size-label">Cat Size</label>
+                <div className="mooncat-size-row">
+                  <button
+                    onClick={() => setCatScale((s) => Math.max(0.1, s - 0.1))}
+                    className="mooncat-size-btn"
+                  >
+                    −
+                  </button>
+                  <span className="mooncat-size-value">
+                    {catScale.toFixed(1)}
+                  </span>
+                  <button
+                    onClick={() => setCatScale((s) => s + 0.1)}
+                    className="mooncat-size-btn"
+                  >
+                    ＋
+                  </button>
+                </div>
+                  <div
+                  style={{
+                    fontSize: "0.95rem",
+                    color: "#6b7280",
+                    margin: "8px 0 0 0",
+                  }}
+                >
+                    Drag the cat for placement
+                  </div>
+                <button
+                  className="mooncat-reset-btn"
+                  onClick={handleReset}
+                  disabled={loading}
+                  style={{ marginTop: 10 }}
+                >
+                  Reset Cat Position
                 </button>
               </div>
-            </div>
-            <div className="mooncat-bg-controls">
-  <label className="mooncat-label" style={{ marginBottom: 4 }}>Canvas Background</label>
-  <div className="mooncat-bg-presets">
-    <button type="button" onClick={() => setCanvasBg("#fff")} style={{ background: "#fff", color: "#222", border: canvasBg==='#fff' ? '2px solid #4f46e5':'1px solid #d1d5db' }}>White</button>
-    <button type="button" onClick={() => setCanvasBg("#608191")} style={{ background: "#608191", color: "#fff", border: canvasBg==='#608191' ? '2px solid #4f46e5':'1px solid #d1d5db' }}>Blue</button>
-    <button type="button" onClick={() => setCanvasBg("#181818")} style={{ background: "#181818", color: "#fff", border: canvasBg==='#181818' ? '2px solid #4f46e5':'1px solid #d1d5db' }}>Black</button>
-    <button type="button" onClick={() => setCanvasBg("#a99dfe")} style={{ background: "#a99dfe", color: "#fff", border: canvasBg==="#a99dfe" ? '2px solid #4f46e5':'1px solid #d1d5db' }}>Purple</button>
-    <input
-      type="color"
-      value={canvasBg}
-      onChange={e => setCanvasBg(e.target.value)}
-      style={{ marginLeft: 12, border: 'none', background: 'none', width: 36, height: 32, verticalAlign: 'middle' }}
-      title="Custom"
-    />
-  </div>
-</div>
+            )}
 
-            <button
-              className="mooncat-reset-btn"
-              onClick={handleReset}
-              disabled={loading}
-              style={{ marginTop: 10 }}
-            >
-              Reset Cat Position
-            </button>
-            <div
-              style={{
-                fontSize: "0.95rem",
-                color: "#6b7280",
-                margin: "8px 0 0 0",
-              }}
-            >
-              Cat X: {catX} | Cat Y: {catY} | Scale: {catScale}
-              <br />Drag the cat for placement
+            <div className="mooncat-bg-controls">
+              <label className="mooncat-label" style={{ marginBottom: 4 }}>
+                Canvas Background
+              </label>
+              <div className="mooncat-bg-presets">
+                <button
+                  type="button"
+                  onClick={() => setCanvasBg("#fff")}
+                  style={{
+                    background: "#fff",
+                    color: "#222",
+                    border:
+                      canvasBg === "#fff"
+                        ? "2px solid #4f46e5"
+                        : "1px solid #d1d5db",
+                  }}
+                >
+                  White
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCanvasBg("#608191")}
+                  style={{
+                    background: "#608191",
+                    color: "#fff",
+                    border:
+                      canvasBg === "#608191"
+                        ? "2px solid #4f46e5"
+                        : "1px solid #d1d5db",
+                  }}
+                >
+                  Blue
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCanvasBg("#181818")}
+                  style={{
+                    background: "#181818",
+                    color: "#fff",
+                    border:
+                      canvasBg === "#181818"
+                        ? "2px solid #4f46e5"
+                        : "1px solid #d1d5db",
+                  }}
+                >
+                  Black
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCanvasBg("#a99dfe")}
+                  style={{
+                    background: "#a99dfe",
+                    color: "#fff",
+                    border:
+                      canvasBg === "#a99dfe"
+                        ? "2px solid #4f46e5"
+                        : "1px solid #d1d5db",
+                  }}
+                >
+                  Purple
+                </button>
+                <input
+                  type="color"
+                  value={canvasBg}
+                  onChange={(e) => setCanvasBg(e.target.value)}
+                  style={{
+                    marginLeft: 12,
+                    border: "none",
+                    background: "none",
+                    width: 36,
+                    height: 32,
+                    verticalAlign: "middle",
+                  }}
+                  title="Custom"
+                />
+              </div>
             </div>
           </div>
-          <div className="mooncat-canvas-wrapper" >
+          <div className="mooncat-mode-row">
+            <button
+              className={`mooncat-mode-btn${mode5997 ? " active" : ""}`}
+              onClick={handleModeToggle}
+              type="button"
+              style={{ marginBottom: 12 }}
+            >
+              5997 Mode 🐱
+            </button>
+          </div>
+
+          <div className="mooncat-canvas-wrapper">
             {punkSVG && catSVG && (
               <svg
                 id="mooncat-svg-canvas"
                 width={SVG_WIDTH}
                 height={SVG_HEIGHT}
-                viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT + 100}`}
+                viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT + 200}`}
                 style={{ border: "1px solid #eee", background: canvasBg }}
               >
-                {/* Punk SVG, perfectly centered */}
-                <g dangerouslySetInnerHTML={{ __html: punkSVG }} />
-                {/* Draggable MoonCat */}
-                <g
-                  transform={`translate(${catX},${catY}) scale(${catScale})`}
-                  style={{ cursor: "grab" }}
-                  onMouseDown={handleCatMouseDown}
-                  dangerouslySetInnerHTML={{ __html: catSVG }}
-                />
+                {mode5997 ? (
+                  <>
+                    {/* Cat is big and static, Punk is draggable & scalable */}
+                    <g
+                      transform={`translate(50, 120) scale(2)`}
+                      dangerouslySetInnerHTML={{ __html: catSVG }}
+                    />
+                    <g
+                      transform={`translate(${punkX},${punkY}) scale(${punkScale})`}
+                      style={{ cursor: "grab" }}
+                      onMouseDown={handlePunkMouseDown}
+                      dangerouslySetInnerHTML={{ __html: punkSVG }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* Punk is static, Cat is draggable & scalable */}
+                    <g dangerouslySetInnerHTML={{ __html: punkSVG }} />
+                    <g
+                      transform={`translate(${catX},${catY}) scale(${catScale})`}
+                      style={{ cursor: "grab" }}
+                      onMouseDown={handleCatMouseDown}
+                      dangerouslySetInnerHTML={{ __html: catSVG }}
+                    />
+                  </>
+                )}
               </svg>
             )}
             {loading && <div className="mooncat-loading">Loading...</div>}
