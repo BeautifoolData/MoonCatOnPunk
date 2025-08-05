@@ -27,6 +27,8 @@ export default function MoonCatPunkComposer() {
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState(null);
 
+  const [canvasBg, setCanvasBg] = useState("#fff");
+
   // NFT input state
   const [punkId, setPunkId] = useState(0);
   const [catId, setCatId] = useState(0);
@@ -264,6 +266,23 @@ export default function MoonCatPunkComposer() {
                 </button>
               </div>
             </div>
+            <div className="mooncat-bg-controls">
+  <label className="mooncat-label" style={{ marginBottom: 4 }}>Canvas Background</label>
+  <div className="mooncat-bg-presets">
+    <button type="button" onClick={() => setCanvasBg("#fff")} style={{ background: "#fff", color: "#222", border: canvasBg==='#fff' ? '2px solid #4f46e5':'1px solid #d1d5db' }}>White</button>
+    <button type="button" onClick={() => setCanvasBg("#608191")} style={{ background: "#608191", color: "#fff", border: canvasBg==='#608191' ? '2px solid #4f46e5':'1px solid #d1d5db' }}>Blue</button>
+    <button type="button" onClick={() => setCanvasBg("#181818")} style={{ background: "#181818", color: "#fff", border: canvasBg==='#181818' ? '2px solid #4f46e5':'1px solid #d1d5db' }}>Black</button>
+    <button type="button" onClick={() => setCanvasBg("#a99dfe")} style={{ background: "#a99dfe", color: "#fff", border: canvasBg==="#a99dfe" ? '2px solid #4f46e5':'1px solid #d1d5db' }}>Purple</button>
+    <input
+      type="color"
+      value={canvasBg}
+      onChange={e => setCanvasBg(e.target.value)}
+      style={{ marginLeft: 12, border: 'none', background: 'none', width: 36, height: 32, verticalAlign: 'middle' }}
+      title="Custom"
+    />
+  </div>
+</div>
+
             <button
               className="mooncat-reset-btn"
               onClick={handleReset}
@@ -283,14 +302,14 @@ export default function MoonCatPunkComposer() {
               <br />Drag the cat for placement
             </div>
           </div>
-          <div className="mooncat-canvas-wrapper">
+          <div className="mooncat-canvas-wrapper" >
             {punkSVG && catSVG && (
               <svg
                 id="mooncat-svg-canvas"
                 width={SVG_WIDTH}
                 height={SVG_HEIGHT}
                 viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT + 100}`}
-                style={{ border: "1px solid #eee", background: "#fff" }}
+                style={{ border: "1px solid #eee", background: canvasBg }}
               >
                 {/* Punk SVG, perfectly centered */}
                 <g dangerouslySetInnerHTML={{ __html: punkSVG }} />

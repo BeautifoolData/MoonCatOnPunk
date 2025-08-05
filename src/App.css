@@ -148,3 +148,26 @@
 .mooncat-connect-btn:hover {
   background: #4338ca;
 }
+
+.mooncat-bg-controls {
+  margin: 20px 0 4px 0;
+  text-align: center;
+}
+.mooncat-bg-presets {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+.mooncat-bg-presets button {
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 0.96rem;
+  cursor: pointer;
+  border: 1px solid #d1d5db;
+  transition: border 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+.mooncat-bg-presets button:focus {
+  box-shadow: 0 0 0 2px #a5b4fc;
+}
