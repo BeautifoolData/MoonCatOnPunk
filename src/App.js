@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { JsonRpcProvider, Contract, BrowserProvider } from "ethers";
 import "./App.css";
 
-const INFURA_URL = process.env.NEXT_PUBLIC_INFURA_URL;
+const INFURA_URL = process.env.INFURA_URL;
 
 const CRYPTOPUNKS_ADDRESS = "0x16f5a35647d6f03d5d3da7b35409d65ba03af3b2";
 const MOONCATS_SVG_ADDRESS = "0xB39C61fe6281324A23e079464f7E697F8Ba6968f";
