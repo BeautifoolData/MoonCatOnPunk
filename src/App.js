@@ -1,13 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
-import { Contract, BrowserProvider } from "ethers";
+import { useState, useEffect } from "react";
+import { JsonRpcProvider, Contract, BrowserProvider } from "ethers";
 import "./App.css";
+
+const INFURA_URL = process.env.NEXT_PUBLIC_INFURA_URL;
 
 const CRYPTOPUNKS_ADDRESS = "0x16f5a35647d6f03d5d3da7b35409d65ba03af3b2";
 const MOONCATS_SVG_ADDRESS = "0xB39C61fe6281324A23e079464f7E697F8Ba6968f";
-
-// Tweak these until your MoonCat is properly aligned when dragging!
-const MOONCAT_OFFSET_X = 6; // This is usually half the MoonCat's width if SVG is 0 0 24 24
-const MOONCAT_OFFSET_Y = 6; // Adjust as needed for perfect vertical alignment
 
 const cryptopunksABI = [
   "function punkImageSvg(uint16 index) view returns (string)",
@@ -19,10 +17,35 @@ const mooncatsABI = [
 
 const SVG_WIDTH = 480;
 const SVG_HEIGHT = 480;
-const PUNK_SIZE = 24; // CryptoPunks are 24x24 SVGs (official)
 const DEFAULT_CAT_SCALE = 0.6;
 
+// Returns a working provider: tries Infura first, then window.ethereum
+async function getProvider(setErrorMsg, connected) {
+  // If wallet is connected, always use it!
+  if (connected && window.ethereum) {
+    try {
+      const browserProvider = new BrowserProvider(window.ethereum);
+      await browserProvider.getBlockNumber(); // Optional: verify connection
+      return browserProvider;
+    } catch (walletErr) {
+      setErrorMsg("Wallet provider unavailable. Please try again later.");
+      return null;
+    }
+  }
+  // Otherwise, try Infura
+  try {
+    const infuraProvider = new JsonRpcProvider(INFURA_URL);
+    // await infuraProvider.getBlockNumber();
+    return infuraProvider;
+  } catch (err) {
+    setErrorMsg("Infura unavailable.");
+    return null;
+  }
+}
+
 export default function MoonCatPunkComposer() {
+  const [providerReady, setProviderReady] = useState(false);
+
   const [mode5997, setMode5997] = useState(false);
 
   // Wallet state
@@ -58,25 +81,6 @@ export default function MoonCatPunkComposer() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
-  const combinedSVG = mode5997
-    ? `
-    <svg width='480' height='600' viewBox='-80 -120 400 400' xmlns='http://www.w3.org/2000/svg'>
-      <g transform='scale(2)'>${catSVG}</g>
-      <g transform='translate(${punkX},${punkY}) scale(${punkScale})'>${punkSVG}</g>
-    </svg>
-  `
-    : `
-    <svg width='480' height='600' viewBox='-40 -80 320 320' xmlns='http://www.w3.org/2000/svg'>
-      <g transform='scale(1)'>${punkSVG}</g>
-      <g transform='translate(${catX},${catY}) scale(${catScale})'>${catSVG}</g>
-    </svg>
-  `;
-
-  // Log cat position and scale on change (for easy manual adjustment)
-  useEffect(() => {
-    console.log(`Cat coordinates: X=${catX}, Y=${catY}, Scale=${catScale}`);
-  }, [catX, catY, catScale]);
-
   function useDebounce(value, delay) {
     const [debounced, setDebounced] = useState(value);
     useEffect(() => {
@@ -89,10 +93,13 @@ export default function MoonCatPunkComposer() {
   // Wallet connect handler
   const handleConnectWallet = async () => {
     if (window.ethereum) {
+      console.log("window.ethereum");
       try {
         setErrorMsg(null);
         setLoading(true);
+        await window.ethereum.request({ method: "eth_requestAccounts" });
         setConnected(true);
+        console.log("connected");
       } catch (err) {
         console.error("Wallet connection error:", err);
         setErrorMsg("Wallet connection denied.");
@@ -103,55 +110,77 @@ export default function MoonCatPunkComposer() {
     setLoading(false);
   };
 
-  // Fetch punk & cat SVGs when connected or inputs change
-  const fetchAndCompose = useCallback(async () => {
-    if (!connected) return;
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      if (
-        typeof window === "undefined" ||
-        typeof window.ethereum === "undefined"
-      ) {
-        throw new Error(
-          "No Ethereum provider found. Please install MetaMask, Rabby, or a compatible wallet.",
-        );
-      }
-
-      const provider = new BrowserProvider(window.ethereum);
-      const punkContract = new Contract(
-        CRYPTOPUNKS_ADDRESS,
-        cryptopunksABI,
-        provider,
-      );
-      const mooncatContract = new Contract(
-        MOONCATS_SVG_ADDRESS,
-        mooncatsABI,
-        provider,
-      );
-
-      // Clamp input IDs for safety
-      const punkIdx = Math.max(0, Math.min(9999, debouncedPunkId));
-      const catIdx = Math.max(0, Math.min(25439, debouncedCatId));
-
-      const punk = await punkContract.punkImageSvg(punkIdx);
-      const cat = await mooncatContract.imageOf(catIdx, false);
-
-      setPunkSVG(punk);
-      setCatSVG(cat);
-    } catch (error) {
-      console.error("Error fetching SVGs:", error);
-      setErrorMsg(error.message || "Failed to fetch SVGs.");
-      setPunkSVG(null);
-      setCatSVG(null);
-    }
-    setLoading(false);
-  }, [connected, debouncedPunkId, debouncedCatId]);
-
-  // Only fetch when wallet connected & IDs change
   useEffect(() => {
-    fetchAndCompose();
-  }, [fetchAndCompose]);
+    if (!providerReady && !connected) return;
+    let isMounted = true;
+    const fetchPunkSVG = async () => {
+      setLoading(true);
+      console.log("getting punk");
+      try {
+        const provider = await getProvider(setErrorMsg, connected);
+
+        const punkContract = new Contract(
+          CRYPTOPUNKS_ADDRESS,
+          cryptopunksABI,
+          provider,
+        );
+        const punkIdx = Math.max(0, Math.min(9999, debouncedPunkId));
+        const punk = await punkContract.punkImageSvg(punkIdx);
+        if (isMounted) setPunkSVG(punk);
+      } catch (error) {
+        if (isMounted)
+          setErrorMsg("Failed to fetch Punk SVG: " + error.message);
+      }
+      setLoading(false);
+    };
+    fetchPunkSVG();
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedPunkId, providerReady, connected]); // Only runs when punkId changes
+
+  // Fetch cat SVG only when catId changes
+  useEffect(() => {
+    if (!providerReady && !connected) return;
+    let isMounted = true;
+    const fetchCatSVG = async () => {
+      setLoading(true);
+      console.log("getting cat");
+      try {
+        const provider = await getProvider(setErrorMsg, connected);
+
+        const mooncatContract = new Contract(
+          MOONCATS_SVG_ADDRESS,
+          mooncatsABI,
+          provider,
+        );
+        const catIdx = Math.max(0, Math.min(25439, debouncedCatId));
+        const cat = await mooncatContract.imageOf(catIdx, false);
+        if (isMounted) setCatSVG(cat);
+      } catch (error) {
+        if (isMounted) setErrorMsg("Failed to fetch Cat SVG: " + error.message);
+      }
+      setLoading(false);
+    };
+    fetchCatSVG();
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedCatId, providerReady, connected]); // Only runs when catId changes
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const infuraProvider = new JsonRpcProvider(INFURA_URL);
+        await infuraProvider.getBlockNumber();
+        setProviderReady(true);
+        setErrorMsg(null);
+      } catch (err) {
+        setProviderReady(false);
+        setErrorMsg("Infura unavailable. Please connect your wallet!");
+      }
+    })();
+  }, []);
 
   // Handle account change in wallet
   useEffect(() => {
@@ -260,7 +289,7 @@ export default function MoonCatPunkComposer() {
         Use a throwaway wallet. Does not check your holdings
       </p>
 
-      {!connected && (
+      {!providerReady && !connected && (
         <button
           className="mooncat-connect-btn"
           onClick={handleConnectWallet}
@@ -371,15 +400,15 @@ export default function MoonCatPunkComposer() {
                     ＋
                   </button>
                 </div>
-                  <div
+                <div
                   style={{
                     fontSize: "0.95rem",
                     color: "#6b7280",
                     margin: "8px 0 0 0",
                   }}
                 >
-                    Drag the cat for placement
-                  </div>
+                  Drag the cat for placement
+                </div>
                 <button
                   className="mooncat-reset-btn"
                   onClick={handleReset}
@@ -479,7 +508,7 @@ export default function MoonCatPunkComposer() {
               5997 Mode 🐱
             </button>
           </div>
-
+          {loading && <div className="mooncat-loading">Loading...</div>}
           <div className="mooncat-canvas-wrapper">
             {punkSVG && catSVG && (
               <svg
@@ -517,7 +546,6 @@ export default function MoonCatPunkComposer() {
                 )}
               </svg>
             )}
-            {loading && <div className="mooncat-loading">Loading...</div>}
           </div>
         </>
       )}
