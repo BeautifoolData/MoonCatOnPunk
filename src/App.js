@@ -302,7 +302,7 @@ export default function MoonCatPunkComposer() {
       {errorMsg && <div className="mooncat-error">{errorMsg}</div>}
 
       {/* Only show controls and canvas if connected */}
-      {connected && (
+      {(providerReady || connected) && (
         <>
           <div className="mooncat-form">
             <div className="mooncat-input-group">
