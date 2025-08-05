@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { JsonRpcProvider, Contract, BrowserProvider } from "ethers";
 import "./App.css";
 
-const INFURA_URL = process.env.NEXT_PUBLIC_INFURA_URL;
+const INFURA_URL = "https://mainnet.infura.io/v3/a94316d3aff1412d92fe781baee26a67"; // I don't know how to secure this. Don't be a jerk
 
 const CRYPTOPUNKS_ADDRESS = "0x16f5a35647d6f03d5d3da7b35409d65ba03af3b2";
 const MOONCATS_SVG_ADDRESS = "0xB39C61fe6281324A23e079464f7E697F8Ba6968f";
@@ -172,7 +172,6 @@ export default function MoonCatPunkComposer() {
     (async () => {
       try {
         const infuraProvider = new JsonRpcProvider(INFURA_URL);
-        console.log('Provider URL:', INFURA_URL); // TODO delete me...
         await infuraProvider.getBlockNumber();
         setProviderReady(true);
         setErrorMsg(null);
