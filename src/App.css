@@ -130,6 +130,8 @@
   box-shadow: 0 3px 12px rgba(0,0,0,0.07);
   display: flex;
   justify-content: center;
+  touch-action: none;
+  user-select: none;
 }
 
 .mooncat-connect-btn {
