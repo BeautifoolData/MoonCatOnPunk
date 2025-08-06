@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { JsonRpcProvider, Contract, BrowserProvider } from "ethers";
 import "./App.css";
 
-const INFURA_URL = "https://mainnet.infura.io/v3/a94316d3aff1412d92fe781baee26a67"; // I don't know how to secure this. Don't be a jerk
+const INFURA_URL =
+  "https://mainnet.infura.io/v3/a94316d3aff1412d92fe781baee26a67"; // I don't know how to secure this. Don't be a jerk
 
 const CRYPTOPUNKS_ADDRESS = "0x16f5a35647d6f03d5d3da7b35409d65ba03af3b2";
 const MOONCATS_SVG_ADDRESS = "0xB39C61fe6281324A23e079464f7E697F8Ba6968f";
@@ -44,6 +45,15 @@ async function getProvider(setErrorMsg, connected) {
 }
 
 export default function MoonCatPunkComposer() {
+  const dragRef = useRef({
+    dragging: false,
+    startCat: { x: 0, y: 0 },
+    startPunk: { x: 0, y: 0 },
+    startX: 0,
+    startY: 0,
+    svg: null,
+  });
+
   const [providerReady, setProviderReady] = useState(false);
 
   const [mode5997, setMode5997] = useState(false);
@@ -69,6 +79,9 @@ export default function MoonCatPunkComposer() {
   const DEFAULT_CAT_X = SVG_WIDTH / 2 - 24;
   const DEFAULT_CAT_Y = 20;
 
+  const catPosRef = useRef({ x: DEFAULT_CAT_X, y: DEFAULT_CAT_Y });
+  const punkPosRef = useRef({ x: 0, y: 0 });
+
   const [catX, setCatX] = useState(DEFAULT_CAT_X);
   const [catY, setCatY] = useState(DEFAULT_CAT_Y);
   const [catScale, setCatScale] = useState(DEFAULT_CAT_SCALE);
@@ -80,6 +93,50 @@ export default function MoonCatPunkComposer() {
   // Loading/error
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+
+  useEffect(() => {
+    catPosRef.current = { x: catX, y: catY };
+    punkPosRef.current = { x: punkX, y: punkY };
+  }, [catX, catY, punkX, punkY]);
+
+  useEffect(() => {
+    function handleMove(e2) {
+      if (!dragRef.current.dragging) return;
+      const isTouch = e2.type === "touchmove";
+      const moveEvent = isTouch ? e2.touches[0] : e2;
+      const { svg, startCat, startPunk, startX, startY } = dragRef.current;
+
+      if (!svg) return;
+
+      const pt2 = svg.createSVGPoint();
+      pt2.x = moveEvent.clientX;
+      pt2.y = moveEvent.clientY;
+      const curr = pt2.matrixTransform(svg.getScreenCTM().inverse());
+      if (mode5997) {
+        setPunkX(startPunk.x + (curr.x - startX));
+        setPunkY(startPunk.y + (curr.y - startY));
+      } else {
+        setCatX(startCat.x + (curr.x - startX));
+        setCatY(startCat.y + (curr.y - startY));
+      }
+    }
+
+    function handleUp() {
+      dragRef.current.dragging = false;
+    }
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchend", handleUp, { passive: false });
+
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchmove", handleMove, { passive: false });
+      window.removeEventListener("touchend", handleUp, { passive: false });
+    };
+  }, [mode5997]);
 
   function useDebounce(value, delay) {
     const [debounced, setDebounced] = useState(value);
@@ -93,7 +150,6 @@ export default function MoonCatPunkComposer() {
   // Wallet connect handler
   const handleConnectWallet = async () => {
     if (window.ethereum) {
-      console.log("window.ethereum");
       try {
         setErrorMsg(null);
         setLoading(true);
@@ -196,58 +252,35 @@ export default function MoonCatPunkComposer() {
     return () => window.ethereum.removeListener("accountsChanged", handler);
   }, []);
 
-  const handleCatMouseDown = (e) => {
+  const handleItemMouseDown = (e) => {
     e.preventDefault();
-    const svg = document.getElementById("mooncat-svg-canvas"); // This is crucial
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const start = pt.matrixTransform(svg.getScreenCTM().inverse());
-
-    const startCat = { x: catX, y: catY };
-
-    const handleMove = (e2) => {
-      const pt2 = svg.createSVGPoint();
-      pt2.x = e2.clientX;
-      pt2.y = e2.clientY;
-      const curr = pt2.matrixTransform(svg.getScreenCTM().inverse());
-
-      setCatX(startCat.x + (curr.x - start.x));
-      setCatY(startCat.y + (curr.y - start.y));
-    };
-    const handleUp = () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-    };
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
-  };
-
-  const handlePunkMouseDown = (e) => {
-    e.preventDefault();
+    const isTouch = e.type === "touchstart";
+    const startEvent = isTouch ? e.touches[0] : e;
     const svg = document.getElementById("mooncat-svg-canvas");
+    if (!svg) return;
     const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
+    pt.x = startEvent.clientX;
+    pt.y = startEvent.clientY;
     const start = pt.matrixTransform(svg.getScreenCTM().inverse());
-
-    const startPunk = { x: punkX, y: punkY };
-
-    const handleMove = (e2) => {
-      const pt2 = svg.createSVGPoint();
-      pt2.x = e2.clientX;
-      pt2.y = e2.clientY;
-      const curr = pt2.matrixTransform(svg.getScreenCTM().inverse());
-
-      setPunkX(startPunk.x + (curr.x - start.x));
-      setPunkY(startPunk.y + (curr.y - start.y));
-    };
-    const handleUp = () => {
-      window.removeEventListener("mousemove", handleMove);
-      window.removeEventListener("mouseup", handleUp);
-    };
-    window.addEventListener("mousemove", handleMove);
-    window.addEventListener("mouseup", handleUp);
+    if (mode5997) {
+      dragRef.current = {
+        dragging: true,
+        startCat: { ...catPosRef.current },
+        startPunk: { ...punkPosRef.current },
+        startX: start.x,
+        startY: start.y,
+        svg,
+      };
+    } else {
+      dragRef.current = {
+        dragging: true,
+        startCat: { ...catPosRef.current },
+        startPunk: {...punkPosRef.current},
+        startX: start.x,
+        startY: start.y,
+        svg,
+      };
+    }
   };
 
   // Reset position/scale
@@ -516,7 +549,11 @@ export default function MoonCatPunkComposer() {
                 width={SVG_WIDTH}
                 height={SVG_HEIGHT}
                 viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT + 200}`}
-                style={{ border: "1px solid #eee", background: canvasBg }}
+                style={{
+                  border: "1px solid #eee",
+                  background: canvasBg,
+                  touchAction: "none",
+                }}
               >
                 {mode5997 ? (
                   <>
@@ -527,8 +564,9 @@ export default function MoonCatPunkComposer() {
                     />
                     <g
                       transform={`translate(${punkX},${punkY}) scale(${punkScale})`}
-                      style={{ cursor: "grab" }}
-                      onMouseDown={handlePunkMouseDown}
+                      style={{ cursor: "grab", touchAction: "none" }}
+                      onMouseDown={handleItemMouseDown}
+                      onTouchStart={handleItemMouseDown}
                       dangerouslySetInnerHTML={{ __html: punkSVG }}
                     />
                   </>
@@ -538,8 +576,9 @@ export default function MoonCatPunkComposer() {
                     <g dangerouslySetInnerHTML={{ __html: punkSVG }} />
                     <g
                       transform={`translate(${catX},${catY}) scale(${catScale})`}
-                      style={{ cursor: "grab" }}
-                      onMouseDown={handleCatMouseDown}
+                      style={{ cursor: "grab", touchAction: "none" }}
+                      onMouseDown={handleItemMouseDown}
+                      onTouchStart={handleItemMouseDown}
                       dangerouslySetInnerHTML={{ __html: catSVG }}
                     />
                   </>
