@@ -234,7 +234,7 @@ export default function MoonCatPunkComposer() {
   };
 
   // Download function
-  const handleDownload = async (format = 'png') => {
+  const handleDownload = async () => {
     const svg = document.getElementById("mooncat-svg-canvas");
     if (!svg) return;
 
@@ -258,75 +258,96 @@ export default function MoonCatPunkComposer() {
       const svgData = new XMLSerializer().serializeToString(svgClone);
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
       
-      if (format === 'svg') {
-        // Direct SVG download
-        const url = URL.createObjectURL(svgBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `punk-${punkId}-cat-${catId}.svg`;
-        link.click();
-        URL.revokeObjectURL(url);
-      } else {
-        // Convert to raster format (PNG)
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        
-        // Use higher resolution for better pixel art rendering
-        const scale = 12; // Render at 2x for crisp pixels
-        canvas.width = 800 * scale;
-        canvas.height = 800 * scale;
-        
-        img.onload = () => {
-          // Disable all smoothing and interpolation for pixel-perfect rendering
-          ctx.imageSmoothingEnabled = false;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.webkitImageSmoothingEnabled = false;
-          ctx.mozImageSmoothingEnabled = false;
-          ctx.msImageSmoothingEnabled = false;
-          
-          // Fill background at high resolution
-          ctx.fillStyle = canvasBg;
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
-          // Draw image at high resolution
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          
-          // Scale back down for final output
-          const outputCanvas = document.createElement('canvas');
-          const outputCtx = outputCanvas.getContext('2d');
-          outputCanvas.width = 800;
-          outputCanvas.height = 800;
-          
-          // Disable smoothing for the scale-down operation too
-          outputCtx.imageSmoothingEnabled = false;
-          outputCtx.webkitImageSmoothingEnabled = false;
-          outputCtx.mozImageSmoothingEnabled = false;
-          outputCtx.msImageSmoothingEnabled = false;
-          
-          outputCtx.drawImage(canvas, 0, 0, 800, 800);
-          
-          outputCanvas.toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `punk-${punkId}-cat-${catId}.${format}`;
-            link.click();
-            URL.revokeObjectURL(url);
-          }, `image/${format}`, 1.0);
-        };
-        
-        // Ensure the SVG has proper shape-rendering for pixel art
-        const pixelPerfectSvgData = svgData.replace('<svg', '<svg image-rendering="pixelated"');
-        const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(pixelPerfectSvgData)));
-        img.src = svgDataUrl;
-      }
+      // Direct SVG download
+      const url = URL.createObjectURL(svgBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `punk-${punkId}-cat-${catId}.svg`;
+      link.click();
+      URL.revokeObjectURL(url);    
       
       // Clean up
       document.body.removeChild(tempDiv);
     } catch (error) {
       console.error('Download failed:', error);
       setErrorMsg('Download failed. Please try again.');
+    }
+  };
+
+  const [pngImageSrc, setPngImageSrc] = useState(null);
+
+  const generatePNG = async () => {
+    const svg = document.getElementById("mooncat-svg-canvas");
+    if (!svg) return;
+
+    try {
+      // Clone the SVG to avoid modifying the original
+      const svgClone = svg.cloneNode(true);
+      svgClone.setAttribute('width', '800');
+      svgClone.setAttribute('height', '800');
+      svgClone.style.border = 'none';
+      
+      // Create a temporary container
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.appendChild(svgClone);
+      document.body.appendChild(tempDiv);
+
+      // Convert SVG to string
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      
+      // Convert to PNG
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      // Use higher resolution for better pixel art rendering
+      const scale = 16;
+      canvas.width = 800 * scale;
+      canvas.height = 800 * scale;
+      
+      img.onload = () => {
+        // Disable all smoothing for pixel-perfect rendering
+        ctx.imageSmoothingEnabled = false;
+        ctx.webkitImageSmoothingEnabled = false;
+        ctx.mozImageSmoothingEnabled = false;
+        ctx.msImageSmoothingEnabled = false;
+        
+        // Fill background
+        ctx.fillStyle = canvasBg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Scale back down
+        const outputCanvas = document.createElement('canvas');
+        const outputCtx = outputCanvas.getContext('2d');
+        outputCanvas.width = 800;
+        outputCanvas.height = 800;
+        
+        outputCtx.imageSmoothingEnabled = false;
+        outputCtx.webkitImageSmoothingEnabled = false;
+        outputCtx.mozImageSmoothingEnabled = false;
+        outputCtx.msImageSmoothingEnabled = false;
+        
+        outputCtx.drawImage(canvas, 0, 0, 800, 800);
+        
+        // Convert to data URL for right-click saving
+        const dataUrl = outputCanvas.toDataURL('image/png');
+        setPngImageSrc(dataUrl);
+      };
+      
+      // Ensure pixel-perfect SVG rendering
+      const pixelPerfectSvgData = svgData.replace('<svg', '<svg shape-rendering="crispEdges" image-rendering="pixelated"');
+      const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(pixelPerfectSvgData)));
+      img.src = svgDataUrl;
+      
+      // Clean up
+      document.body.removeChild(tempDiv);
+      console.log("done");
+    } catch (error) {
+      console.error('PNG generation failed:', error);
+      setErrorMsg('PNG generation failed. Please try again.');
     }
   };
 
@@ -740,7 +761,7 @@ export default function MoonCatPunkComposer() {
             </button></div>
             <div>
               <button
-                onClick={() => handleDownload('svg')}
+                onClick={handleDownload}
                 className="mooncat-reset-btn"
                 disabled={!punkSVG || !catSVG}
                 style={{ 
@@ -754,7 +775,7 @@ export default function MoonCatPunkComposer() {
               </button>
 
               <button
-                onClick={() => handleDownload('png')}
+                onClick={generatePNG}
                 className="mooncat-reset-btn"
                 disabled={!punkSVG || !catSVG}
                 style={{ 
@@ -765,9 +786,38 @@ export default function MoonCatPunkComposer() {
                   marginLeft: '10px'
                 }}
               >
-                Download PNG
+                Generate PNG
               </button>
             </div>
+            <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: 4 }}>
+              Generate PNG then right-click to copy/save
+            </div>
+              
+            {/* Generated PNG display */}
+            {pngImageSrc && (
+              <div style={{ marginTop: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: '0.9rem', marginBottom: 8, color: '#374151' }}>
+                  Right-click the image below to copy or save:
+                </div>
+                <img 
+                  src={pngImageSrc} 
+                  alt="Generated PNG"
+                  style={{ 
+                    maxWidth: '300px', 
+                    border: '2px solid #e5e7eb', 
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                  onContextMenu={(e) => {
+                    // Allow right-click context menu
+                    e.stopPropagation();
+                  }}
+                />
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>
+                  800×800px • Right-click for "Copy image" or "Save image as..."
+                </div>
+              </div>
+            )}
           </div>
           {loading && <div className="mooncat-loading">Loading...</div>}
           <div className="mooncat-canvas-wrapper">
