@@ -55,13 +55,10 @@ export default function MoonCatPunkComposer() {
   });
 
   const [providerReady, setProviderReady] = useState(false);
-
   const [mode5997, setMode5997] = useState(false);
-
-  // Wallet state
   const [connected, setConnected] = useState(false);
-
   const [canvasBg, setCanvasBg] = useState("#fff");
+  const [autoCrop, setAutoCrop] = useState(true);
 
   // NFT input state
   const [punkId, setPunkId] = useState(0);
@@ -146,6 +143,192 @@ export default function MoonCatPunkComposer() {
     }, [value, delay]);
     return debounced;
   }
+
+  // Calculate optimal viewBox for cropping
+  const getOptimalViewBox = () => {
+    if (!autoCrop || !punkSVG || mode5997) {
+      return `0 0 ${SVG_WIDTH} ${SVG_HEIGHT + 200}`;
+    }
+
+    // Standard punk dimensions are 24x24, scaled up to 480x480 (20x scale)
+    const punkWidth = 480;
+    const punkHeight = 480;
+    
+    // Calculate punk bounds precisely
+    let punkLeft = punkX;
+    let punkTop = punkY;
+    let punkRight = punkX + (punkWidth * punkScale);
+    let punkNeckY = punkY + (punkHeight * punkScale);
+
+    // In normal mode, punk is at 0,0
+    if (!mode5997) {
+      punkLeft = 0;
+      punkTop = 0;
+      punkRight = punkWidth;
+      punkNeckY = punkHeight;
+    }
+
+    // FIXED: Bottom boundary is always at punk neck (no downward expansion)
+    const fixedBottom = punkNeckY;
+
+    // Start with punk bounds for horizontal and upward expansion
+    let contentLeft = punkLeft;
+    let contentTop = punkTop;
+    let contentRight = punkRight;
+
+    // Add cat bounds if visible (but don't let cat expand downward past punk neck)
+    if (catSVG) {
+      const catWidth = 64;
+      const catHeight = 64;
+      
+      let catLeft = catX;
+      let catTop = catY;
+      let catRight = catX + (catWidth * catScale);
+
+      // In 5997 mode, cat is at fixed position
+      if (mode5997) {
+        catLeft = 50;
+        catTop = 120;
+        catRight = 50 + (catWidth * 2);
+      }
+
+      // Expand bounds to include cat (leftward, rightward, upward only)
+      contentLeft = Math.min(contentLeft, catLeft);
+      contentTop = Math.min(contentTop, catTop); // Can expand upward
+      contentRight = Math.max(contentRight, catRight);
+      // Note: we don't expand contentBottom based on cat position
+    }
+
+    // Calculate dimensions with fixed bottom
+    const finalLeft = contentLeft;
+    const finalTop = contentTop;
+    const finalRight = contentRight;
+    const finalBottom = fixedBottom; // Always fixed at punk neck
+    
+    const finalWidth = finalRight - finalLeft;
+    const finalHeight = finalBottom - finalTop;
+
+    // Ensure minimum dimensions by expanding upward and outward only
+    const minWidth = 200;
+    const minHeight = 200;
+    
+    let adjustedLeft = finalLeft;
+    let adjustedTop = finalTop;
+    let adjustedWidth = Math.max(minWidth, finalWidth);
+    let adjustedHeight = Math.max(minHeight, finalHeight);
+
+    // If we need to expand width, expand equally left and right
+    if (adjustedWidth > finalWidth) {
+      const widthDiff = adjustedWidth - finalWidth;
+      adjustedLeft = finalLeft - (widthDiff / 2);
+    }
+
+    // If we need to expand height, expand upward only (keep bottom fixed)
+    if (adjustedHeight > finalHeight) {
+      const heightDiff = adjustedHeight - finalHeight;
+      adjustedTop = finalTop - heightDiff; // Expand upward only
+    }
+
+    // Round to avoid sub-pixel rendering issues
+    return `${Math.round(adjustedLeft * 10) / 10} ${Math.round(adjustedTop * 10) / 10} ${Math.round(adjustedWidth * 10) / 10} ${Math.round(adjustedHeight * 10) / 10}`;
+  };
+
+  // Download function
+  const handleDownload = async (format = 'png') => {
+    const svg = document.getElementById("mooncat-svg-canvas");
+    if (!svg) return;
+
+    try {
+      // Clone the SVG to avoid modifying the original
+      const svgClone = svg.cloneNode(true);
+      svgClone.setAttribute('width', '800');
+      svgClone.setAttribute('height', '800');
+      
+      // Remove the border from the downloaded version
+      svgClone.style.border = 'none';
+      
+      // Create a temporary container
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.appendChild(svgClone);
+      document.body.appendChild(tempDiv);
+
+      // Convert SVG to string
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      
+      if (format === 'svg') {
+        // Direct SVG download
+        const url = URL.createObjectURL(svgBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `punk-${punkId}-cat-${catId}.svg`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // Convert to raster format (PNG)
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        // Use higher resolution for better pixel art rendering
+        const scale = 12; // Render at 2x for crisp pixels
+        canvas.width = 800 * scale;
+        canvas.height = 800 * scale;
+        
+        img.onload = () => {
+          // Disable all smoothing and interpolation for pixel-perfect rendering
+          ctx.imageSmoothingEnabled = false;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.webkitImageSmoothingEnabled = false;
+          ctx.mozImageSmoothingEnabled = false;
+          ctx.msImageSmoothingEnabled = false;
+          
+          // Fill background at high resolution
+          ctx.fillStyle = canvasBg;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw image at high resolution
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          
+          // Scale back down for final output
+          const outputCanvas = document.createElement('canvas');
+          const outputCtx = outputCanvas.getContext('2d');
+          outputCanvas.width = 800;
+          outputCanvas.height = 800;
+          
+          // Disable smoothing for the scale-down operation too
+          outputCtx.imageSmoothingEnabled = false;
+          outputCtx.webkitImageSmoothingEnabled = false;
+          outputCtx.mozImageSmoothingEnabled = false;
+          outputCtx.msImageSmoothingEnabled = false;
+          
+          outputCtx.drawImage(canvas, 0, 0, 800, 800);
+          
+          outputCanvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `punk-${punkId}-cat-${catId}.${format}`;
+            link.click();
+            URL.revokeObjectURL(url);
+          }, `image/${format}`, 1.0);
+        };
+        
+        // Ensure the SVG has proper shape-rendering for pixel art
+        const pixelPerfectSvgData = svgData.replace('<svg', '<svg image-rendering="pixelated"');
+        const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(pixelPerfectSvgData)));
+        img.src = svgDataUrl;
+      }
+      
+      // Clean up
+      document.body.removeChild(tempDiv);
+    } catch (error) {
+      console.error('Download failed:', error);
+      setErrorMsg('Download failed. Please try again.');
+    }
+  };
 
   // Wallet connect handler
   const handleConnectWallet = async () => {
@@ -275,7 +458,7 @@ export default function MoonCatPunkComposer() {
       dragRef.current = {
         dragging: true,
         startCat: { ...catPosRef.current },
-        startPunk: {...punkPosRef.current},
+        startPunk: { ...punkPosRef.current },
         startX: start.x,
         startY: start.y,
         svg,
@@ -371,6 +554,21 @@ export default function MoonCatPunkComposer() {
                 />
               </div>
             </div>
+
+            {/* Auto-crop toggle */}
+            <div className="mooncat-input-group">
+              <label className="mooncat-label">
+                <input
+                  type="checkbox"
+                  checked={autoCrop}
+                  onChange={(e) => setAutoCrop(e.target.checked)}
+                  style={{ marginRight: 8 }}
+                />
+                Auto-crop
+              </label>
+            </div>
+
+
             {mode5997 ? (
               <div className="mooncat-punk-controls" style={{ marginTop: 8 }}>
                 <label className="mooncat-size-label">Punk Size</label>
@@ -532,14 +730,44 @@ export default function MoonCatPunkComposer() {
             </div>
           </div>
           <div className="mooncat-mode-row">
-            <button
+            <div><button
               className={`mooncat-mode-btn${mode5997 ? " active" : ""}`}
               onClick={handleModeToggle}
               type="button"
               style={{ marginBottom: 12 }}
             >
               5997 Mode 🐱
-            </button>
+            </button></div>
+            <div>
+              <button
+                onClick={() => handleDownload('svg')}
+                className="mooncat-reset-btn"
+                disabled={!punkSVG || !catSVG}
+                style={{ 
+                  background: '#8b5cf6', 
+                  color: 'white',
+                  border: 'none',
+                  minWidth: 80
+                }}
+              >
+                Download SVG
+              </button>
+
+              <button
+                onClick={() => handleDownload('png')}
+                className="mooncat-reset-btn"
+                disabled={!punkSVG || !catSVG}
+                style={{ 
+                  background: '#8b5cf6', 
+                  color: 'white',
+                  border: 'none',
+                  minWidth: 80,
+                  marginLeft: '10px'
+                }}
+              >
+                Download PNG
+              </button>
+            </div>
           </div>
           {loading && <div className="mooncat-loading">Loading...</div>}
           <div className="mooncat-canvas-wrapper">
@@ -548,7 +776,7 @@ export default function MoonCatPunkComposer() {
                 id="mooncat-svg-canvas"
                 width={SVG_WIDTH}
                 height={SVG_HEIGHT}
-                viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT + 200}`}
+                viewBox={getOptimalViewBox()}
                 style={{
                   border: "1px solid #eee",
                   background: canvasBg,
