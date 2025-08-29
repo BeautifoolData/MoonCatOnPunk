@@ -792,29 +792,6 @@ export default function MoonCatPunkComposer() {
             <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: 4 }}>
               Generate PNG then right-click to copy/save
             </div>
-              
-            {/* Generated PNG display */}
-            {pngImageSrc && (
-              <div style={{ marginTop: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: '0.9rem', marginBottom: 8, color: '#374151' }}>
-                  Right-click the image below to copy or save:
-                </div>
-                <img 
-                  src={pngImageSrc} 
-                  alt="Generated PNG"
-                  style={{ 
-                    cursor: 'pointer'
-                  }}
-                  onContextMenu={(e) => {
-                    // Allow right-click context menu
-                    e.stopPropagation();
-                  }}
-                />
-                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>
-                  800×800px • Right-click for "Copy image" or "Save image as..."
-                </div>
-              </div>
-            )}
           </div>
           {loading && <div className="mooncat-loading">Loading...</div>}
           <div className="mooncat-canvas-wrapper">
@@ -861,6 +838,28 @@ export default function MoonCatPunkComposer() {
               </svg>
             )}
           </div>
+          <div> {/* Generated PNG display */}
+            {pngImageSrc && (
+              <div style={{ marginTop: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: '0.9rem', marginBottom: 8, color: '#374151' }}>
+                  Right-click the image below to copy or save:
+                </div>
+                <img 
+                  src={pngImageSrc} 
+                  alt="Generated PNG"
+                  style={{ 
+                    cursor: 'pointer'
+                  }}
+                  onContextMenu={(e) => {
+                    // Allow right-click context menu
+                    e.stopPropagation();
+                  }}
+                />
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>
+                  800×800px • Right-click for "Copy image" or "Save image as..."
+                </div>
+              </div>
+            )}</div>
         </>
       )}
     </div>
