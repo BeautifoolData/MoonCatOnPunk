@@ -803,9 +803,6 @@ export default function MoonCatPunkComposer() {
                   src={pngImageSrc} 
                   alt="Generated PNG"
                   style={{ 
-                    maxWidth: '300px', 
-                    border: '2px solid #e5e7eb', 
-                    borderRadius: '8px',
                     cursor: 'pointer'
                   }}
                   onContextMenu={(e) => {
