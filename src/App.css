@@ -4,7 +4,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   font-family: 'Segoe UI', sans-serif;
 }
 
@@ -197,6 +196,10 @@
 }
 .mooncat-mode-btn.active:hover {
   background: #4f46e5;
+}
+
+.mooncat-mode-row{
+  text-align: center;
 }
 
 .mooncat-punk-controls,
